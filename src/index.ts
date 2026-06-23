@@ -13,7 +13,7 @@ import { z } from "zod";
 const X402_CONFIG: X402Config = {
   // "base-sepolia" = réseau de TEST (argent fictif, gratuit). Pour tester.
   // "base"         = réseau RÉEL (vrai USDC). À mettre quand tu es prêt.
-  network: "base-sepolia",
+  network: "base",
 
   // 👇 REMPLACE par TON adresse de portefeuille (commence par 0x).
   //    C'est là que l'argent arrive. Voir explications sous le code.
