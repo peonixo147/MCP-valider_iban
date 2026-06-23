@@ -17,7 +17,7 @@ const X402_CONFIG: X402Config = {
 
   // 👇 REMPLACE par TON adresse de portefeuille (commence par 0x).
   //    C'est là que l'argent arrive. Voir explications sous le code.
-  recipient: "0xRemplaceParTonAdresse",
+  recipient: "0xfcad5460ca9e7b030e708f945de8b82775cb21ba",
 
   // Le "facilitateur" public de Coinbase vérifie et règle le paiement.
   // Tu n'as rien à faire ici, c'est la valeur par défaut.
