@@ -4,5 +4,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-01-01",
   "compatibility_flags": ["nodejs_compat"],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [
+      { "name": "MCP_OBJECT", "class_name": "MyMCP" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["MyMCP"] }
+  ]
 }
