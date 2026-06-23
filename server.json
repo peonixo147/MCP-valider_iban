@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.peonixo147/iban-validated",
+  "title": "IBAN Validator",
+  "description": "Validate IBAN bank account numbers (format + mod-97 checksum). Returns whether the IBAN is valid.",
+  "repository": {
+    "url": "https://github.com/peonixo147/MCP-valider_iban",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://iban-validated.othmen-mohammadi.workers.dev/mcp"
+    }
+  ]
+}
