@@ -1,12 +1,30 @@
-// MCP server EN LIGNE (Cloudflare Worker) — modèle McpAgent (officiel, fiable).
-// Un seul tool gratuit : valider_iban.
+// MCP server EN LIGNE + PAIEMENT x402 (Cloudflare Worker, modèle McpAgent).
+// Le tool "valider_iban" est désormais PAYANT : l'agent paie en USDC par appel.
 // Endpoint MCP : https://<ton-worker>.workers.dev/mcp
 
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { withX402, type X402Config } from "agents/x402";
 import { z } from "zod";
 
-// --- Logique du tool : validation IBAN par checksum mod-97 (100% autonome).
+// ============================================================
+//  CONFIG PAIEMENT — les 2 seules choses à régler :
+// ============================================================
+const X402_CONFIG: X402Config = {
+  // "base-sepolia" = réseau de TEST (argent fictif, gratuit). Pour tester.
+  // "base"         = réseau RÉEL (vrai USDC). À mettre quand tu es prêt.
+  network: "base-sepolia",
+
+  // 👇 REMPLACE par TON adresse de portefeuille (commence par 0x).
+  //    C'est là que l'argent arrive. Voir explications sous le code.
+  recipient: "0xRemplaceParTonAdresse",
+
+  // Le "facilitateur" public de Coinbase vérifie et règle le paiement.
+  // Tu n'as rien à faire ici, c'est la valeur par défaut.
+  facilitator: { url: "https://x402.org/facilitator" },
+};
+// ============================================================
+
 function ibanEstValide(iban: string): boolean {
   const propre = iban.replace(/\s+/g, "").toUpperCase();
   if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(propre)) return false;
@@ -21,34 +39,37 @@ function ibanEstValide(iban: string): boolean {
   return reste === 1;
 }
 
-// --- Le serveur MCP, porté par un McpAgent (Durable Object par session).
 export class MyMCP extends McpAgent {
-  server = new McpServer({ name: "mon-premier-mcp", version: "1.0.0" });
+  // On enveloppe le serveur avec la couche de paiement.
+  server = withX402(
+    new McpServer({ name: "mon-premier-mcp", version: "1.0.0" }),
+    X402_CONFIG
+  );
 
   async init() {
-    this.server.registerTool(
+    // paidTool = comme tool, mais payant. Signature :
+    // (nom, description, prixUSD, schéma, annotations, handler)
+    this.server.paidTool(
       "valider_iban",
+      "Vérifie si un numéro IBAN est valide (format + checksum mod-97).",
+      0.01, // prix en USD par appel
       {
-        title: "Valider un IBAN",
-        description:
-          "Vérifie si un numéro IBAN est valide (format + checksum). Renvoie valide: true/false.",
-        inputSchema: {
-          iban: z
-            .string()
-            .describe("Le numéro IBAN à vérifier, ex: BE68539007547034"),
-        },
+        iban: z
+          .string()
+          .describe("Le numéro IBAN à vérifier, ex: BE68539007547034"),
       },
+      {}, // annotations MCP (vide ici)
       async ({ iban }) => {
         const valide = ibanEstValide(iban);
 
-        // --- Journal : 1 ligne par appel (visible dans Observability / wrangler tail).
-        //     Plus tard : remplace par un insert Supabase.
+        // Journal : 1 ligne par appel PAYÉ (visible dans Observability).
         console.log(
           JSON.stringify({
             date: new Date().toISOString(),
             tool: "valider_iban",
             entree: iban,
             statut: valide ? "valide" : "invalide",
+            paye: true,
           })
         );
 
@@ -67,21 +88,21 @@ export class MyMCP extends McpAgent {
   }
 }
 
-// --- Routage du Worker.
 export default {
   fetch(request: Request, env: unknown, ctx: ExecutionContext) {
     const { pathname } = new URL(request.url);
     if (pathname === "/") {
-      return new Response("MCP server en ligne. Endpoint MCP : /mcp", {
-        status: 200,
-        headers: { "content-type": "text/plain; charset=utf-8" },
-      });
+      return new Response(
+        "MCP server en ligne (tool payant). Endpoint MCP : /mcp",
+        {
+          status: 200,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        }
+      );
     }
-    // Transport moderne (Streamable HTTP) :
     if (pathname === "/mcp") {
       return MyMCP.serve("/mcp").fetch(request, env as never, ctx);
     }
-    // Transport SSE (clients plus anciens) :
     if (pathname === "/sse") {
       return MyMCP.serveSSE("/sse").fetch(request, env as never, ctx);
     }
